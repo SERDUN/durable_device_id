@@ -118,6 +118,51 @@ Things to know before relying on it:
   (an old browser, a page not served over HTTPS) two tabs opened at the very same moment on a first visit can each
   get one, and only the later one is kept.
 
+## Comparison with other packages
+
+Several packages on pub.dev already give a device identifier that outlives a reinstall. This one exists because we
+needed a combination none of them had: an identifier that is scoped to the app on every Android version, never a
+hardware identifier, a call that cannot throw, and the web. The table is what their published code did when we read it
+in October 2026.
+
+|                                   | durable_device_id            | [flutter_udid] 4.1.6       | [stable_device_id] 0.2.0            | [persistent_device_id] 2.0.0             |
+|-----------------------------------|------------------------------|----------------------------|-------------------------------------|------------------------------------------|
+| Android source                    | `ANDROID_ID`                 | `ANDROID_ID`               | `ANDROID_ID`, Widevine on request   | Widevine, else a UUID in app storage     |
+| What leaves the Android side      | digest with the package name | the raw value              | the raw value (Widevine: a digest)  | the raw Widevine identifier              |
+| Scoped to the app below Android 8 | yes                          | no                         | no                                  | n/a                                      |
+| iOS source                        | Keychain                     | Keychain                   | Keychain                            | Keychain                                 |
+| Native dependencies               | none                         | KeychainAccess             | none                                | AndroidX Security Crypto                 |
+| Web                               | local storage                | no                         | no                                  | no                                       |
+| macOS, Windows, Linux             | no                           | yes                        | no                                  | no                                       |
+| When there is no identifier       | `null`                       | throws                     | throws                              | `null`, channel errors throw             |
+| Faking it in tests                | an interface                 | static call                | platform interface                  | platform interface                       |
+
+What the differences mean in practice:
+
+- **No raw system identifier leaves the device.** The backend receives a digest of `ANDROID_ID` and the package name.
+  Below Android 8 `ANDROID_ID` is one value for every app on the phone, so a raw value there identifies the user
+  across apps; the digest does not.
+- **No hardware identifier.** The Widevine device ID belongs to the hardware and usually survives a factory reset.
+  That is more than "the same phone after a reinstall" needs, and a factory reset is a point where a device changing
+  hands should become a new device.
+- **One answer for "no identifier".** `read()` returns `null` on an unsupported platform, an empty system value, a
+  Keychain that cannot be read yet, a missing plugin registration or any other failure. There is nothing to catch.
+- **The web is covered, with its limits stated.** The others leave the web out; this one gives the best a browser has
+  and says where it ends.
+- **Nothing to audit but this package.** Around 150 lines of Kotlin and Swift, no native libraries pulled in.
+
+When another package is the better choice:
+
+- You need **desktop** platforms: `flutter_udid` has them, this package does not.
+- You need the identifier to **survive a factory reset**: only the Widevine-based ones can, with the trade-off above.
+- You are moving an iOS app that already has an identifier and want to **keep that value**: `stable_device_id` can
+  seed the Keychain with it. This package always generates its own.
+- You want a package with **years of use behind it**: `flutter_udid` has that; this one is new.
+
+[flutter_udid]: https://pub.dev/packages/flutter_udid
+[stable_device_id]: https://pub.dev/packages/stable_device_id
+[persistent_device_id]: https://pub.dev/packages/persistent_device_id
+
 ## Example
 
 The [example](example) app shows the identifier and prints it to the device log, which is the quickest way to check
