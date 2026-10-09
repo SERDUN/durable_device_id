@@ -1,0 +1,34 @@
+name: durable_device_id
+description: "A device identifier that survives a reinstall of the app: ANDROID_ID on Android, a Keychain item on iOS, local storage on the web. Answers null instead of throwing."
+version: 0.1.0
+homepage: https://github.com/SERDUN/durable_device_id
+repository: https://github.com/SERDUN/durable_device_id
+issue_tracker: https://github.com/SERDUN/durable_device_id/issues
+
+environment:
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
+
+platforms:
+  android:
+  ios:
+  web:
+
+dependencies:
+  flutter:
+    sdk: flutter
+  web: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.serdun.durable_device_id
+        pluginClass: DurableDeviceIdPlugin
+      ios:
+        pluginClass: DurableDeviceIdPlugin
